@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "seed_sync",
+  "version": "0.1.0",
+  "name": "Seed Sync",
+  "description": "Syncs single-player world names, seeds, and dates to seed-syncmc.com",
+  "authors": [
+    "Runterya + ChatGPT"
+  ],
+  "contact": {
+    "homepage": "https://seed-syncmc.com"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.seed_sync.SeedSyncMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "1.21.x",
+    "fabric-api": "*"
+  },
+  "mixins": []
+}
