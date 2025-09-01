@@ -17,39 +17,36 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Ensure Loom can be found + map 1.11 -> 1.11.7 if requested
+      # Inject Fabric Maven for plugin resolution (no repo changes needed)
       - name: Inject Loom plugin repositories
         run: |
           mkdir -p "$HOME/.gradle/init.d"
           cat > "$HOME/.gradle/init.d/loom-plugin-repos.gradle" << 'EOF'
-          // Make Loom resolvable on CI even if settings.gradle lacks pluginManagement
+          // Ensure fabric-loom can be resolved during pluginManagement on CI
           settingsEvaluated { settings ->
               settings.pluginManagement.repositories {
                   maven { url = uri("https://maven.fabricmc.net/") }
                   gradlePluginPortal()
                   mavenCentral()
               }
-              // If the build asks for "fabric-loom:1.11", redirect to a real published version.
+              // Map generic "1.11" to a real published version; otherwise use requested version
               settings.pluginManagement.resolutionStrategy.eachPlugin { req ->
                   if (req.requested.id.id == "fabric-loom") {
                       if (req.requested.version == "1.11") {
                           useModule("fabric-loom:fabric-loom.gradle.plugin:1.11.7")
                       } else if (req.requested.version != null) {
-                          // Ensure we resolve the marker from Fabric's Maven for any other version.
                           useModule("fabric-loom:fabric-loom.gradle.plugin:${req.requested.version}")
                       }
                   }
               }
           }
           EOF
-          echo "Created init script at $HOME/.gradle/init.d/loom-plugin-repos.gradle"
-          ls -al "$HOME/.gradle/init.d"
 
-      # Build with a managed Gradle (no wrapper needed)
+      # Build with managed Gradle
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          gradle-version: 8.12
+          gradle-version: 8.14
           arguments: clean build
 
       - name: Upload JAR
