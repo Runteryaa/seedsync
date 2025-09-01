@@ -1,17 +1,12 @@
-# .github/workflows/build.yml
-name: Build (Seed Sync Fabric)
+name: Build (Fabric 1.21.x)
 
 on:
   push:
-    branches: ["**"]
-    tags: ["v*"]
   pull_request:
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,44 +15,33 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: '21'
 
-      # Optional sanity check (nice to have)
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
+      # Inject Fabric Maven into pluginManagement at build time (no repo changes needed)
+      - name: Inject Fabric Maven for plugin resolution
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/loom-plugin-repos.gradle << 'EOF'
+          // Ensures the Loom plugin can be resolved on CI even if settings.gradle
+          // doesn't declare pluginManagement repositories.
+          settingsEvaluated { settings ->
+              settings.pluginManagement.repositories {
+                  maven { url = uri("https://maven.fabricmc.net/") }
+                  gradlePluginPortal()
+                  mavenCentral()
+              }
+          }
+          EOF
 
-      # Enable Gradle build cache & dependency caching (uses your wrapper)
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      # Uses Gradle without needing a wrapper in-repo
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.8
+          arguments: build
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Build (no-daemon)
-        run: ./gradlew --no-daemon clean build
-
-      - name: Upload JARs
+      - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: seed-sync-build
+          name: seed-sync-jar
           path: build/libs/*.jar
-          if-no-files-found: error
-
-  # Optional: publish a release when you push a tag like v0.1.0
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: seed-sync-build
-          path: artifacts
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*.jar
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
