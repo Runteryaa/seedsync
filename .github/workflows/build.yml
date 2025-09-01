@@ -1,74 +1,31 @@
-# .github/workflows/build.yml
-name: Build (Seed Sync Fabric)
+name: Build (Fabric 1.21.x)
 
 on:
   push:
-    branches: ["**"]
-    tags: ["v*"]
   pull_request:
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: '21'
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v2
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
+      # Uses Gradle without needing a wrapper in-repo
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v3
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: 8.8
+          arguments: build
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
-      - name: Build (no-daemon)
-        run: ./gradlew --no-daemon clean build
-
-      - name: Upload build artifacts
+      - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
-          name: seed-sync-build
-          path: |
-            build/libs/*.jar
-          if-no-files-found: error
-
-  release:
-    # Only run on tags like v0.1.0
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: seed-sync-build
-          path: artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*.jar
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: seed-sync-jar
+          path: build/libs/*.jar
