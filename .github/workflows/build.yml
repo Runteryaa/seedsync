@@ -17,37 +17,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Inject Fabric Maven for plugin resolution (no repo changes needed)
-      - name: Inject Loom plugin repositories
-        run: |
-          mkdir -p "$HOME/.gradle/init.d"
-          cat > "$HOME/.gradle/init.d/loom-plugin-repos.gradle" << 'EOF'
-          // Ensure fabric-loom can be resolved during pluginManagement on CI
-          settingsEvaluated { settings ->
-              settings.pluginManagement.repositories {
-                  maven { url = uri("https://maven.fabricmc.net/") }
-                  gradlePluginPortal()
-                  mavenCentral()
-              }
-              // Map generic "1.11" to a real published version; otherwise use requested version
-              settings.pluginManagement.resolutionStrategy.eachPlugin { req ->
-                  if (req.requested.id.id == "fabric-loom") {
-                      if (req.requested.version == "1.11") {
-                          useModule("fabric-loom:fabric-loom.gradle.plugin:1.11.7")
-                      } else if (req.requested.version != null) {
-                          useModule("fabric-loom:fabric-loom.gradle.plugin:${req.requested.version}")
-                      }
-                  }
-              }
-          }
-          EOF
-
-      # Build with managed Gradle
+      # Uses Gradle without needing a wrapper in-repo
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
-          gradle-version: 8.14
-          arguments: clean build
+          gradle-version: 8.8
+          arguments: build
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
