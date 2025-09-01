@@ -14,7 +14,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.seed_sync.SeedSyncMod"
+      "com.runteya.seedsync.SeedSyncMod"
     ]
   },
   "depends": {
