@@ -17,11 +17,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # 🔧 Inject Fabric Maven for plugin resolution (no repo changes needed)
+      # Inject Fabric Maven for plugin resolution (no repo changes needed)
       - name: Inject Loom plugin repositories
         run: |
-          mkdir -p ~/.gradle/init.d
-          cat > ~/.gradle/init.d/loom-plugin-repos.gradle << 'EOF'
+          mkdir -p "$HOME/.gradle/init.d"
+          cat > "$HOME/.gradle/init.d/loom-plugin-repos.gradle" << 'EOF'
           // Ensure fabric-loom can be resolved during pluginManagement on CI
           settingsEvaluated { settings ->
               settings.pluginManagement.repositories {
@@ -29,7 +29,6 @@ jobs:
                   gradlePluginPortal()
                   mavenCentral()
               }
-              // Be explicit about how to resolve the Loom plugin module
               settings.pluginManagement.resolutionStrategy.eachPlugin { req ->
                   if (req.requested.id.id == "fabric-loom" && req.requested.version != null) {
                       useModule("fabric-loom:fabric-loom.gradle.plugin:${req.requested.version}")
@@ -37,18 +36,15 @@ jobs:
               }
           }
           EOF
+          echo ">> Created init script at $HOME/.gradle/init.d/loom-plugin-repos.gradle"
+          ls -al "$HOME/.gradle/init.d"
 
-      # Optional: see Gradle + JDK versions in logs
-      - name: Gradle version
-        run: echo "Gradle will be installed by the action below (8.8)" && java -version
-
-      # ✅ Build with a managed Gradle (no wrapper needed)
+      # Uses Gradle without needing a wrapper in-repo
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v3
         with:
           gradle-version: 8.8
-          # Pass the init script explicitly (init.d also auto-loads; this makes it bulletproof)
-          arguments: --init-script ~/.gradle/init.d/loom-plugin-repos.gradle build
+          arguments: clean build
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
